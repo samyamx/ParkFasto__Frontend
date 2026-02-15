@@ -1,16 +1,38 @@
-# React + Vite
+# ParkFasto Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project Overview
+ParkFasto is a smart parking management system designed to make parking hassle-free for drivers and parking lot owners.  
+The frontend is responsible for providing a seamless user interface where users can:
 
-Currently, two official plugins are available:
+- Find and book parking spots
+- View real-time availability
+- Manage their profiles and reservations
+- Receive notifications or updates
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This frontend is built to interact with the backend API for all data operations.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **Framework:** React (with Vite for fast development and build)
+- **State Management:** Redux Toolkit / React Context (if used)
+- **Styling:** Tailwind CSS + custom CSS
+- **Routing:** React Router DOM
+- **HTTP Requests:** Axios
+- **Authentication:** JWT-based token handling
+- **Deployment:** Vercel
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+---
+
+## How It Works
+
+1. User interacts with UI components on the frontend.
+2. Frontend sends HTTP requests to the backend API for data.
+3. Backend responds with JSON, which frontend renders.
+4. JWT tokens are used to authenticate users and protect routes.
+5. Real-time updates can be fetched periodically or using web sockets (if implemented).
+
+---
