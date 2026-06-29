@@ -540,7 +540,7 @@ const Dashboard = () => {
       <header className="dashboard-header">
         <div className="nav-logo">
           <AppLogo size={28} className="nav-logo-img" />
-          <span className="nav-logo-text">ParkFasto</span>
+          <span className="nav-logo-text">Parko</span>
         </div>
 
         <div className="nav-search-wrap">

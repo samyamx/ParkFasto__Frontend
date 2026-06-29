@@ -150,7 +150,7 @@ const Contact = () => {
               <Mail size={24} />
             </div>
             <h3>Email</h3>
-            <p>ParkFasto@parkingapp.com</p>
+            <p>Parko@parkingapp.com</p>
           </div>
           <div className="info-card">
             <div className="info-icon">
