@@ -32,6 +32,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import '../styles/AdminDashboard.css';
+import AppLogo from '../components/AppLogo';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -437,7 +438,7 @@ const AdminDashboard = () => {
       <aside className="admin-sidebar">
         <div className="sidebar-header">
           <div className="admin-logo">
-            <div className="logo-square">P</div>
+            <AppLogo size={32} className="admin-logo-img" />
             <span>ParkAdmin</span>
           </div>
         </div>

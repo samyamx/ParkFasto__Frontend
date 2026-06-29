@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Navigation,
 } from 'lucide-react';
+import AppLogo from '../components/AppLogo';
 import '../styles/LandingPage.css';
 
 const LandingPage = () => {
@@ -17,7 +18,7 @@ const LandingPage = () => {
       <nav className="glass-nav">
         <div className="nav-content">
           <div className="logo">
-            <div className="logo-icon">P</div>
+            <AppLogo size={32} className="logo-image" />
             <span>ParkFasto</span>
           </div>
 
@@ -125,7 +126,7 @@ const LandingPage = () => {
       <footer className="landing-footer">
         <div className="footer-content">
           <div className="footer-logo">
-            <div className="logo-icon">P</div>
+            <AppLogo size={28} className="logo-image" />
             <span>ParkFasto</span>
           </div>
           <p>© 2024 ParkFasto. Built for a Smarter Kathmandu.</p>

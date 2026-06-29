@@ -48,16 +48,8 @@
   color: var(--admin-primary);
 }
 
-.logo-square {
-  width: 32px;
-  height: 32px;
-  background: var(--admin-primary);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-size: 1.1rem;
+.admin-logo-img {
+  flex-shrink: 0;
 }
 
 .sidebar-nav {

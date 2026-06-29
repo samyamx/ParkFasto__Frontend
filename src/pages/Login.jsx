@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Lock, MapPin, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext'; // Import useAuth
+import AppLogo from '../components/AppLogo';
 import '../styles/Login.css';
 
 const Login = () => {
@@ -68,9 +69,7 @@ const Login = () => {
         {/* Header Section: Logo and Title */}
         <div className="login-header">
           <div className="logo-container">
-            <div className="logo-icon-wrapper">
-              <MapPin className="logo-icon" size={32} fill="#3b82f6" />
-            </div>
+            <AppLogo size={56} className="logo-image" />
             <h1>Parking Area Allocation System</h1>
           </div>
         </div>

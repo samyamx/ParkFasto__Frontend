@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   MapPin,
   Navigation,
@@ -8,13 +8,13 @@ import {
   Compass,
   Bell,
   Menu,
-  Settings,
   HelpCircle,
   Car,
   Crosshair,
   X,
 } from 'lucide-react';
 import ActionSearchBar from '../components/ActionSearchBar';
+import AppLogo from '../components/AppLogo';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
@@ -328,6 +328,7 @@ const Dashboard = () => {
   const [selectedLot, setSelectedLot] = useState(null);
   const [leafletMap, setLeafletMap] = useState(null);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -350,6 +351,17 @@ const Dashboard = () => {
   const displayLot = selectedLot
     ? parkingLots.find((lot) => lot._id === selectedLot._id) || selectedLot
     : null;
+
+  const nearbyLots = useMemo(() => {
+    return parkingLots
+      .filter(isLotOpen)
+      .map((lot) => ({
+        ...lot,
+        distance: getLotDistanceKm(lot) ?? Infinity,
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 5);
+  }, [parkingLots, userLocation]);
 
   const handleMapReady = useCallback((map) => {
     setLeafletMap(map);
@@ -526,6 +538,7 @@ const Dashboard = () => {
       {/* ── Fixed Top Navbar ── */}
       <header className="dashboard-header">
         <div className="nav-logo">
+          <AppLogo size={28} className="nav-logo-img" />
           <span className="nav-logo-text">ParkFasto</span>
         </div>
 
@@ -564,6 +577,7 @@ const Dashboard = () => {
             aria-label="Notifications"
             onClick={async () => {
               const nextState = !notificationOpen;
+              setNearbyOpen(false);
               setNotificationOpen(nextState);
               if (nextState) {
                 await fetchNotifications();
@@ -576,8 +590,17 @@ const Dashboard = () => {
               <span className="nav-notify-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
             )}
           </button>
-          <button className="nav-icon-btn" aria-label="Settings" onClick={() => navigate('/profile')}>
-            <Settings size={20} />
+          <button
+            className="nav-icon-btn"
+            aria-label="Nearby parking locations"
+            aria-expanded={nearbyOpen}
+            onClick={() => {
+              setNotificationOpen(false);
+              if (!nearbyOpen && !trackingEnabled) startTracking();
+              setNearbyOpen((prev) => !prev);
+            }}
+          >
+            <MapPin size={20} />
           </button>
           <button className="navbar-profile" onClick={() => navigate('/profile')} aria-label="Profile">
             {avatarLetter}
@@ -587,6 +610,51 @@ const Dashboard = () => {
           </button>
         </div>
       </header>
+
+      {nearbyOpen && (
+        <>
+          <div className="notification-panel-backdrop" onClick={() => setNearbyOpen(false)} />
+          <aside className="notification-panel nearby-panel">
+            <div className="notification-panel-header">
+              <h4>Nearby Parking</h4>
+              <button type="button" onClick={() => setNearbyOpen(false)} aria-label="Close nearby locations">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="notification-panel-body">
+              {!userLocation && (
+                <p className="nearby-location-hint">Enable location to see distances from you.</p>
+              )}
+              {nearbyLots.length === 0 ? (
+                <p className="notification-empty">No available parking nearby right now.</p>
+              ) : (
+                nearbyLots.map((lot) => (
+                  <button
+                    key={lot._id}
+                    type="button"
+                    className="nearby-lot-item"
+                    onClick={() => {
+                      selectLot(lot, { route: true });
+                      setNearbyOpen(false);
+                    }}
+                  >
+                    <div className="nearby-lot-main">
+                      <span className="nearby-lot-name">{lot.name}</span>
+                      <span className="nearby-lot-spots">{getAvailableSlots(lot)} spots free</span>
+                    </div>
+                    <div className="nearby-lot-meta">
+                      <span>NPR {lot.pricePerHour}/hr</span>
+                      {lot.distance !== Infinity && (
+                        <span>{lot.distance < 1 ? `${(lot.distance * 1000).toFixed(0)} m` : `${lot.distance.toFixed(1)} km`}</span>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
 
       {notificationOpen && (
         <>

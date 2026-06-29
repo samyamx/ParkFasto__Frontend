@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, MapPin, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import AppLogo from '../components/AppLogo';
 import '../styles/Register.css';
 
 const Register = () => {
@@ -79,9 +80,7 @@ const Register = () => {
         {/* Header Section: Logo and Title */}
         <div className="register-header">
           <div className="logo-container">
-            <div className="logo-icon-wrapper">
-              <MapPin className="logo-icon" size={32} fill="#3b82f6" />
-            </div>
+            <AppLogo size={56} className="logo-image" />
             <h1>Parking Area Allocation System</h1>
           </div>
         </div>

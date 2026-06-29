@@ -61,24 +61,8 @@
   gap: 12px;
 }
 
-.logo-icon {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #2563eb;
-  background: white;
-  padding: 12px;
-  border-radius: 16px;
-  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
-}
-
-.logo-letter {
-  position: absolute;
-  color: white;
-  font-weight: 800;
-  font-size: 14px;
-  top: 15px;
+.logo-image {
+  display: block;
 }
 
 .login-header h1 {
