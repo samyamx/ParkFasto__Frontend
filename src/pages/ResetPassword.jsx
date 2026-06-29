@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 import '../styles/ResetPassword.css';
 
 function ResetPassword() {
@@ -57,7 +58,7 @@ function ResetPassword() {
 
     try {
       const response = await axios.post(
-        `https://parkfasto-backend-2.onrender.com/api/v1/users/reset-password/${token}`,
+        `${API_BASE_URL}/users/reset-password/${token}`,
         {
           password: formData.password,
           passwordConfirm: formData.passwordConfirm

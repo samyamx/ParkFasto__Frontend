@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, MessageSquare, Send, AlertCircle, CheckCircle } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 import '../styles/Contact.css';
 
 const Contact = () => {
@@ -23,7 +24,7 @@ const Contact = () => {
     setStatus('Sending your message...');
     setStatusType('');
     try {
-      const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/contact', {
+      const response = await fetch(`${API_BASE_URL}/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

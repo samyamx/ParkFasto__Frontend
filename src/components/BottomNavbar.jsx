@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Compass, User as UserIcon, Clock, Mail, Bell } from 'lucide-react';
 import '../styles/BottomNavbar.css';
 import { useToast } from '../context/ToastContext';
+import { API_BASE_URL } from '../config/api';
 
 const BottomNavbar = () => {
   const location = useLocation();
@@ -19,7 +20,7 @@ const BottomNavbar = () => {
 
     try {
       setLoadingNotifications(true);
-      const res = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/notifications', {
+      const res = await fetch(`${API_BASE_URL}/users/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -38,7 +39,7 @@ const BottomNavbar = () => {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/notifications/read-all', {
+      await fetch(`${API_BASE_URL}/users/notifications/read-all`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });

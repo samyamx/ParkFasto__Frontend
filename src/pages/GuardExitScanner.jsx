@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { ShieldCheck, ArrowLeft, CheckCircle2, XCircle, Loader2, Camera, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 import '../styles/AdminDashboard.css';
 
 const GuardExitScanner = () => {
@@ -18,7 +19,7 @@ const GuardExitScanner = () => {
     useEffect(() => {
         const fetchLots = async () => {
             try {
-                const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/parking/lots');
+                const response = await fetch(`${API_BASE_URL}/parking/lots`);
                 const data = await response.json();
                 if (data.success) {
                     setParkingLots(data.data);
@@ -114,7 +115,7 @@ const GuardExitScanner = () => {
         setError(null);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/parking/guard/exit', {
+            const response = await fetch(`${API_BASE_URL}/parking/guard/exit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

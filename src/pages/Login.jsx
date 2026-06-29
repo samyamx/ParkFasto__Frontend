@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext'; // Import useAuth
 import AppLogo from '../components/AppLogo';
+import { API_BASE_URL } from '../config/api';
 import '../styles/Login.css';
 
 const Login = () => {
@@ -33,7 +34,7 @@ const Login = () => {
 
     try {
       // API call to backend login endpoint (using upstream URL)
-      const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/login', {
+      const response = await fetch(`${API_BASE_URL}/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

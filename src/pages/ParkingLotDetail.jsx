@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Clock3, MapPin, CircleDollarSign, CarFront } from 'lucide-react';
 import { useLocationContext } from '../context/LocationContext';
+import { API_BASE_URL } from '../config/api';
 import '../styles/ParkingLotDetail.css';
 
 const ParkingLotDetail = () => {
@@ -22,7 +23,7 @@ const ParkingLotDetail = () => {
 
   const fetchLot = async () => {
     try {
-      const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/parking/lots');
+      const response = await fetch(`${API_BASE_URL}/parking/lots`);
       const data = await response.json();
       if (data.success) {
         const foundLot = (data.data || []).find((item) => item._id === lotId);
@@ -95,7 +96,7 @@ const ParkingLotDetail = () => {
       setBookingLoading(true);
       const token = localStorage.getItem('token');
 
-      const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/parking/book', {
+      const response = await fetch(`${API_BASE_URL}/parking/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

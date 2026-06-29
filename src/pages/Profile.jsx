@@ -4,6 +4,7 @@ import axios from 'axios';
 import { QRCodeCanvas } from "qrcode.react";
 import { Camera, Mail, Lock, LogOut, ChevronRight, User as UserIcon, Download, X, QrCode } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { API_BASE_URL } from '../config/api';
 import '../styles/Profile.css';
 
 /**
@@ -46,7 +47,7 @@ function Profile() {
           throw new Error('No authentication token found.');
         }
 
-        const response = await axios.get('https://parkfasto-backend-2.onrender.com/api/v1/users/profile', {
+        const response = await axios.get(`${API_BASE_URL}/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -94,7 +95,7 @@ function Profile() {
         const formData = new FormData();
         formData.append('photo', selectedFile);
 
-        const response = await axios.patch('https://parkfasto-backend-2.onrender.com/api/v1/users/profile', formData, {
+        const response = await axios.patch(`${API_BASE_URL}/users/profile`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'multipart/form-data',
@@ -121,7 +122,7 @@ function Profile() {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
-      const response = await axios.patch('https://parkfasto-backend-2.onrender.com/api/v1/users/profile', editForm, {
+      const response = await axios.patch(`${API_BASE_URL}/users/profile`, editForm, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -156,7 +157,7 @@ function Profile() {
         // Save QR code to backend database
         const token = localStorage.getItem('token');
         const response = await axios.post(
-          'https://parkfasto-backend-2.onrender.com/api/v1/qr/generate',
+          `${API_BASE_URL}/qr/generate`,
           { qrData: qrDataString },
           {
             headers: {

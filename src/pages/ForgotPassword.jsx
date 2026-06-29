@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 import '../styles/ForgotPassword.css';
 
 function ForgotPassword() {
@@ -18,7 +19,7 @@ function ForgotPassword() {
     setError('');
 
     try {
-      const response = await axios.post('https://parkfasto-backend-2.onrender.com/api/v1/users/forgot-password', { email });
+      const response = await axios.post(`${API_BASE_URL}/users/forgot-password`, { email });
       
       if (response.data.success) {
         setSubmitted(true);

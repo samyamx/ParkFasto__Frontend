@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import ActionSearchBar from '../components/ActionSearchBar';
 import AppLogo from '../components/AppLogo';
+import { API_BASE_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
@@ -382,7 +383,7 @@ const Dashboard = () => {
 
     try {
       setLoadingNotifications(true);
-      const res = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/notifications', {
+      const res = await fetch(`${API_BASE_URL}/users/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -401,7 +402,7 @@ const Dashboard = () => {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/notifications/read-all', {
+      await fetch(`${API_BASE_URL}/users/notifications/read-all`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -435,7 +436,7 @@ const Dashboard = () => {
   const fetchData = async (lat, lon) => {
     try {
       // Fetch Parking Lots with location if available
-      let url = 'https://parkfasto-backend-2.onrender.com/api/v1/parking/lots';
+      let url = `${API_BASE_URL}/parking/lots`;
       if (lat && lon) {
         url += `?lat=${lat}&lon=${lon}`;
       }
@@ -459,7 +460,7 @@ const Dashboard = () => {
       // Fetch Active Session (Requires Auth Token)
       const token = localStorage.getItem('token');
       if (token) {
-        const sessionRes = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/parking/active-session', {
+        const sessionRes = await fetch(`${API_BASE_URL}/parking/active-session`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const sessionData = await sessionRes.json();

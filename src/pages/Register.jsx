@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import AppLogo from '../components/AppLogo';
+import { API_BASE_URL } from '../config/api';
 import '../styles/Register.css';
 
 const Register = () => {
@@ -42,7 +43,7 @@ const Register = () => {
 
     try {
       // API call to backend registration endpoint (using upstream URL)
-      const response = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/signup', {
+      const response = await fetch(`${API_BASE_URL}/users/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

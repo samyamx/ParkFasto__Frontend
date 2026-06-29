@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 import '../styles/Dashboard.css';
 
 export default function BookingHistory() {
@@ -13,7 +14,7 @@ export default function BookingHistory() {
         setLoading(true);
         setError(null);
         const token = localStorage.getItem('token');
-        const res = await axios.get('https://parkfasto-backend-2.onrender.com/api/v1/parking/bookings', {
+        const res = await axios.get(`${API_BASE_URL}/parking/bookings`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' }
         });
         setBookings(res.data?.data || []);
