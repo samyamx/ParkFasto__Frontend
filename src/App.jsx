@@ -33,7 +33,7 @@ const Layout = ({ children }) => {
     return <div>Loading application...</div>;
   }
 
-  const showBottomNavbar = user && (user.role === 'user' || user.role === 'driver') && !isAdminRoute && !isGuardRoute;
+  const showBottomNavbar = user && (user.role === 'user' || user.role === 'driver') && !isAdminRoute && !isGuardRoute && location.pathname !== '/dashboard';
 
   return (
     <div className="app">

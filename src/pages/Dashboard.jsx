@@ -1,18 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Search, 
-  MapPin, 
-  Navigation, 
-  Clock, 
-  Wallet, 
-  User as UserIcon, 
+  MapPin,
+  Navigation,
+  Clock,
+  Wallet,
+  User as UserIcon,
   Compass,
-  Menu
+  Bell,
+  Menu,
+  Settings,
+  HelpCircle,
+  Car,
+  Crosshair,
+  X,
 } from 'lucide-react';
+import ActionSearchBar from '../components/ActionSearchBar';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
@@ -66,7 +72,7 @@ const userIcon = new L.Icon({
     shadowSize: [41, 41]
 });
 
-// Parking lot location marker (Green)
+// Parking lot location marker (Green = available)
 const parkingIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -75,6 +81,28 @@ const parkingIcon = new L.Icon({
     popupAnchor: [1, -34],
     shadowSize: [41, 41]
 });
+
+// Parking lot full marker (Red)
+const parkingFullIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+const PARKING_IMAGE =
+  'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&q=80&w=800';
+
+const MapInstanceCapture = ({ onMapReady }) => {
+  const map = useMap();
+  useEffect(() => {
+    onMapReady(map);
+    return () => onMapReady(null);
+  }, [map, onMapReady]);
+  return null;
+};
 
 /**
  * RecenterMap Component
@@ -292,22 +320,19 @@ const Dashboard = () => {
   const [parkingLots, setParkingLots] = useState([]);
   const [timer, setTimer] = useState('00:00:00');
   const [currentBill, setCurrentBill] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchSuggestions, setSearchSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestionsRef = useRef(null);
   const { userLocation, trackingEnabled, startTracking } = useLocationContext();
   const handleRequestLocation = startTracking;
 
   const [mapCenter, setMapCenter] = useState([27.7172, 85.3240]); // Default to Kathmandu
-  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
   const [destination, setDestination] = useState(null);
-  const [selectedDirectionLot, setSelectedDirectionLot] = useState(null);
+  const [selectedLot, setSelectedLot] = useState(null);
+  const [leafletMap, setLeafletMap] = useState(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const searchInputRef = useRef(null);
   const getAvailableSlots = (lot) => Math.max(0, (lot.totalSpots || 0) - (lot.occupiedSpots || 0));
-  const getOccupancyPercent = (lot) => {
-    if (!lot.totalSpots) return 0;
-    return Math.min(100, Math.round(((lot.occupiedSpots || 0) / lot.totalSpots) * 100));
-  };
   const getLotDistanceKm = (lot) => {
     if (!lot) return null;
     if (typeof lot.distance === 'number') return lot.distance;
@@ -320,6 +345,79 @@ const Dashboard = () => {
     const avgCitySpeedKmH = 22;
     return Math.max(2, Math.round((distanceKm / avgCitySpeedKmH) * 60));
   };
+  const getLotAddress = (lot) => lot?.address || lot?.location || 'Kathmandu, Nepal';
+  const isLotOpen = (lot) => lot?.status !== 'full' && getAvailableSlots(lot) > 0;
+  const displayLot = selectedLot
+    ? parkingLots.find((lot) => lot._id === selectedLot._id) || selectedLot
+    : null;
+
+  const handleMapReady = useCallback((map) => {
+    setLeafletMap(map);
+  }, []);
+
+  const selectLot = (lot, { route = false } = {}) => {
+    setSelectedLot(lot);
+    setMapCenter([lot.lat, lot.lon]);
+    if (route) {
+      setDestination([lot.lat, lot.lon]);
+      startTracking();
+    }
+  };
+
+  const fetchNotifications = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      setLoadingNotifications(true);
+      const res = await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNotifications(data.data || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await fetch('https://parkfasto-backend-2.onrender.com/api/v1/users/notifications/read-all', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark notifications as read:', err);
+      showToast('Failed to update notifications', 'error');
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const timer = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // --- Logic: Fetch Data from Backend ---
   const fetchData = async (lat, lon) => {
@@ -377,80 +475,6 @@ const Dashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation]);
 
-  // --- Logic: Search Location (OpenStreetMap Nominatim API) ---
-  const handleSearch = async (e) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', Nepal')}&limit=1`);
-        const data = await response.json();
-        if (data && data.length > 0) {
-          const { lat, lon } = data[0];
-          const newLat = parseFloat(lat);
-          const newLon = parseFloat(lon);
-          setMapCenter([newLat, newLon]);
-          startTracking(); // Show the map and start live tracking if a location is found
-          
-          // Fetch nearby lots for the searched location
-          fetchData(newLat, newLon);
-        } else {
-          showToast('Location not found in Nepal. Please try again.', 'warning');
-        }
-      } catch (error) {
-        console.error('Search error:', error);
-        showToast('Search failed. Please try again.', 'error');
-      }
-    }
-  };
-
-  // Debounced suggestions: combine known lots and Nominatim place suggestions
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchSuggestions([]);
-      return;
-    }
-
-    const timeout = setTimeout(async () => {
-      try {
-        const lower = searchQuery.toLowerCase();
-        // Local matches from fetched parking lots
-        const localMatches = parkingLots
-          .filter(l => l.name && l.name.toLowerCase().includes(lower))
-          .slice(0, 5)
-          .map(l => ({ type: 'lot', id: l._id, label: l.name, lat: l.lat, lon: l.lon }));
-
-        // Remote place suggestions (Nominatim)
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', Nepal')}&limit=5`);
-        const places = await res.json();
-        const placeSuggestions = (places || []).map(p => ({ type: 'place', label: p.display_name, lat: parseFloat(p.lat), lon: parseFloat(p.lon) }));
-
-        // Merge and dedupe by label
-        const merged = [...localMatches, ...placeSuggestions];
-        const seen = new Set();
-        const dedup = merged.filter(s => {
-          if (seen.has(s.label)) return false; seen.add(s.label); return true;
-        });
-
-        setSearchSuggestions(dedup.slice(0, 6));
-        setShowSuggestions(true);
-      } catch (err) {
-        console.error('Suggestion fetch error', err);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeout);
-  }, [searchQuery, parkingLots]);
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    window.addEventListener('click', handler);
-    return () => window.removeEventListener('click', handler);
-  }, []);
-
   // --- Logic: Live Geolocation Tracking ---
   // Use global location context for persistent tracking
  
@@ -498,276 +522,344 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Map Section - Background */}
-      <div className="map-section">
-        {!trackingEnabled ? (
-          <div className="map-placeholder request-location">
-            <div className="location-prompt">
-              <MapPin size={48} color="#6366f1" />
-              <h3>Live Map Tracking</h3>
-              <p>Allow access to your location to find nearby parking and track your movement live.</p>
-              <button className="enable-location-btn" onClick={handleRequestLocation}>
-                Enable Live Tracking
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="map-wrapper">
-            <MapContainer 
-              className={selectedDirectionLot ? 'map-with-direction-panel' : ''}
-              center={mapCenter} 
-              zoom={15} 
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={false}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap contributors'
-              />
-              
-              <RecenterMap position={mapCenter} />
 
-              {userLocation && destination && (
-                <RoutingMachine userLoc={userLocation} destinationLoc={destination} />
-              )}
-
-              {userLocation && (
-                <Marker position={userLocation} icon={userIcon}>
-                  <Popup>You are here (Live)</Popup>
-                </Marker>
-              )}
-
-              {parkingLots.map(lot => (
-                <Marker key={lot._id} position={[lot.lat, lot.lon]} icon={parkingIcon}>
-                  <Popup>
-                    <div className="map-popup-content">
-                      <strong className="popup-title">{lot.name}</strong>
-                      <div className="popup-details">
-                        <div className="popup-detail-item">
-                          <span className="detail-label">Type:</span>
-                          <span className="detail-value">{(lot.type || 'BOTH').toUpperCase()}</span>
-                        </div>
-                        <div className="popup-detail-item">
-                          <span className="detail-label">Price:</span>
-                          <span className="detail-value">NPR {lot.pricePerHour}/hr</span>
-                        </div>
-                        <div className="popup-detail-item">
-                          <span className="detail-label">Occupancy:</span>
-                          <span className="detail-value">{lot.occupiedSpots || 0}/{lot.totalSpots || 0}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="popup-occupancy-bar">
-                        <div 
-                          className="popup-occupancy-fill" 
-                          style={{ 
-                            width: `${Math.min(100, ((lot.occupiedSpots || 0) / (lot.totalSpots || 1)) * 100)}%`,
-                            backgroundColor: ((lot.occupiedSpots || 0) / (lot.totalSpots || 1)) > 0.9 ? '#ef4444' : '#6366f1'
-                          }}
-                        ></div>
-                      </div>
-
-                      <button 
-                        className="get-directions-btn"
-                        onClick={() => {
-                          setDestination([lot.lat, lot.lon]);
-                          setSelectedDirectionLot(lot);
-                          setSidebarOpen(false);
-                        }}
-                      >
-                        Get Directions
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
-        )}
-      </div>
-
-      {/* Overlaid Header */}
+      {/* ── Fixed Top Navbar ── */}
       <header className="dashboard-header">
-        <button className="menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
-          <Menu size={22} />
-        </button>
+        <div className="nav-logo">
+          <span className="nav-logo-text">ParkFasto</span>
+        </div>
 
-        <div className="search-bar-container" ref={suggestionsRef}>
-          <Search size={18} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search location in Nepal..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearch}
-            onFocus={() => { if (searchSuggestions.length) setShowSuggestions(true); }}
+        <div className="nav-search-wrap">
+          <ActionSearchBar
+            inputRef={searchInputRef}
+            parkingLots={parkingLots}
+            onSelectLot={(lot) => {
+              selectLot(lot, { route: true });
+            }}
+            onSelectPlace={(place) => {
+              setMapCenter([place.lat, place.lon]);
+              fetchData(place.lat, place.lon);
+            }}
+            onSearch={async (q) => {
+              try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', Nepal')}&limit=1`);
+                const data = await res.json();
+                if (data?.length) {
+                  const { lat, lon } = data[0];
+                  setMapCenter([parseFloat(lat), parseFloat(lon)]);
+                  fetchData(parseFloat(lat), parseFloat(lon));
+                } else {
+                  showToast('Location not found in Nepal.', 'warning');
+                }
+              } catch {
+                showToast('Search failed. Please try again.', 'error');
+              }
+            }}
           />
+        </div>
 
-          {showSuggestions && searchSuggestions.length > 0 && (
-            <div className="suggestions-dropdown">
-              {searchSuggestions.map((s, idx) => (
-                <div key={idx} className="suggestion-item" onClick={() => {
-                  setSearchQuery(s.label);
-                  setMapCenter([s.lat, s.lon]);
-                  if (s.type === 'lot') setDestination([s.lat, s.lon]);
-                  setShowSuggestions(false);
-                }}>
-                  <div className="suggestion-type">{s.type === 'lot' ? 'Lot' : 'Place'}</div>
-                  <div className="suggestion-label">{s.label}</div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="nav-actions">
+          <button
+            className="nav-icon-btn nav-icon-btn--notify"
+            aria-label="Notifications"
+            onClick={async () => {
+              const nextState = !notificationOpen;
+              setNotificationOpen(nextState);
+              if (nextState) {
+                await fetchNotifications();
+                await markAllNotificationsRead();
+              }
+            }}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <span className="nav-notify-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+            )}
+          </button>
+          <button className="nav-icon-btn" aria-label="Settings" onClick={() => navigate('/profile')}>
+            <Settings size={20} />
+          </button>
+          <button className="navbar-profile" onClick={() => navigate('/profile')} aria-label="Profile">
+            {avatarLetter}
+          </button>
+          <button className="menu-btn mobile-only" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+            <Menu size={20} />
+          </button>
         </div>
       </header>
 
-      {/* Sidebar for Nearby Parking */}
+      {notificationOpen && (
+        <>
+          <div className="notification-panel-backdrop" onClick={() => setNotificationOpen(false)} />
+          <aside className="notification-panel">
+            <div className="notification-panel-header">
+              <h4>Notifications</h4>
+              <button type="button" onClick={() => setNotificationOpen(false)} aria-label="Close notifications">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="notification-panel-body">
+              {loadingNotifications ? (
+                <p className="notification-empty">Loading notifications...</p>
+              ) : notifications.length === 0 ? (
+                <p className="notification-empty">No notifications yet.</p>
+              ) : (
+                notifications.map((item) => (
+                  <div key={item._id} className={`notification-item ${item.isRead ? 'read' : 'unread'}`}>
+                    <div className="notification-item-title">{item.title}</div>
+                    <div className="notification-item-message">{item.message}</div>
+                    <div className="notification-item-time">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* ── Left Sidebar ── */}
       <div className={`sidebar-backdrop ${sidebarOpen ? 'visible' : ''}`} onClick={() => setSidebarOpen(false)} />
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
+        <div className="sidebar-nav-header">
           <div>
-            <h3>Nearby Parking</h3>
-            <p className="sidebar-live-label">Live slots update every 12s</p>
+            <h2 className="sidebar-nav-label">Navigation</h2>
+            <p className="sidebar-nav-sub">Map Dashboard</p>
           </div>
-          <button className="close-sidebar" onClick={() => setSidebarOpen(false)}>X</button>
+          <button className="close-sidebar mobile-only" onClick={() => setSidebarOpen(false)} aria-label="Close menu">
+            <X size={18} />
+          </button>
         </div>
-        <div className="sidebar-list">
-          {parkingLots.filter(lot => (lot.distance || 999) <= 5).length === 0 && <div className="empty-note">No nearby lots found within 5 km.</div>}
-          {parkingLots.filter(lot => (lot.distance || 999) <= 5).map(lot => (
-            <div key={lot._id} className="sidebar-lot">
-              <div className="sidebar-lot-left">
-                <img src={`https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&q=80&w=200`} alt={lot.name} />
-              </div>
-              <div className="sidebar-lot-right">
-                <div className="lot-title">{lot.name}</div>
-                <div className="lot-sub">{lot.distance ? `${lot.distance.toFixed(2)} km` : 'Nearby'} - NPR {lot.pricePerHour}/hr</div>
-                <div className="lot-live-meta">
-                  <span className={`slots-pill ${lot.status === 'full' ? 'full' : 'available'}`}>
-                    {getAvailableSlots(lot)} slots live
-                  </span>
-                  <span className="occupancy-mini">{getOccupancyPercent(lot)}% occupied</span>
-                </div>
-                <div className="lot-actions">
-                  <button
-                    className="lot-detail-btn"
-                    onClick={() => navigate(`/parking/lot/${lot._id}`, { state: { lot, distance: lot.distance } })}
-                  >
-                    View Details
-                  </button>
-                  <button
-                    className={`book-btn ${lot.status}`}
-                    disabled={lot.status === 'full'}
-                    onClick={() => navigate(`/parking/lot/${lot._id}`, { state: { lot, distance: lot.distance } })}
-                  >
-                    {lot.status === 'full' ? 'Sold Out' : 'Book Now'}
-                  </button>
-                  <button className="directions-btn-outline" onClick={() => { setSidebarOpen(false); setMapCenter([lot.lat, lot.lon]); setDestination([lot.lat, lot.lon]); setSelectedDirectionLot(lot); startTracking(); }} title="Show Path"> <Navigation size={16} /> </button>
-                </div>
-              </div>
+
+        <nav className="sidebar-nav">
+          <Link className="sidebar-nav-item active" to="/dashboard" onClick={() => setSidebarOpen(false)}>
+            <Compass size={18} />
+            <span>Explore</span>
+          </Link>
+          <Link className="sidebar-nav-item" to="/history" onClick={() => setSidebarOpen(false)}>
+            <Clock size={18} />
+            <span>History</span>
+          </Link>
+          <Link className="sidebar-nav-item" to="/contact" onClick={() => setSidebarOpen(false)}>
+            <HelpCircle size={18} />
+            <span>Contact</span>
+          </Link>
+          <Link className="sidebar-nav-item" to="/profile" onClick={() => setSidebarOpen(false)}>
+            <UserIcon size={18} />
+            <span>Profile</span>
+          </Link>
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="storage-widget">
+            <p className="storage-label">{isParked ? 'ACTIVE SESSION' : 'STORAGE STATUS'}</p>
+            <div className="storage-bar-track">
+              <div
+                className="storage-bar-fill"
+                style={{ width: isParked ? '65%' : '62%' }}
+              />
             </div>
-          ))}
+            <p className="storage-info">
+              {isParked
+                ? `${timer} · NPR ${currentBill} billed`
+                : '6.2 GB of 10 GB used'}
+            </p>
+          </div>
         </div>
       </aside>
 
-      {selectedDirectionLot && (
-        <aside className="direction-details-panel">
-          <div className="direction-panel-head">
-            <h3>Direction Details</h3>
-            <button className="close-sidebar" onClick={() => setSelectedDirectionLot(null)}>X</button>
-          </div>
-
-          <div className="direction-panel-card">
-            <h4>{selectedDirectionLot.name}</h4>
-            <p>{getLotDistanceKm(selectedDirectionLot) ? `${getLotDistanceKm(selectedDirectionLot).toFixed(2)} km away` : 'Distance unavailable'}</p>
-
-            <div className="direction-panel-grid">
-              <div>
-                <span>Estimated Drive</span>
-                <strong>{getEstimatedDriveMinutes(selectedDirectionLot) ? `${getEstimatedDriveMinutes(selectedDirectionLot)} min` : 'N/A'}</strong>
-              </div>
-              <div>
-                <span>Live Slots</span>
-                <strong>{getAvailableSlots(selectedDirectionLot)}</strong>
-              </div>
-              <div>
-                <span>Occupancy</span>
-                <strong>{getOccupancyPercent(selectedDirectionLot)}%</strong>
-              </div>
-              <div>
-                <span>Rate</span>
-                <strong>NPR {selectedDirectionLot.pricePerHour}/hr</strong>
+      {/* ── Main Map Area ── */}
+      <main className="map-main">
+        {/* Map Section */}
+        <div className="map-section">
+          {!trackingEnabled ? (
+            <div className="map-placeholder request-location">
+              <div className="location-prompt">
+                <MapPin size={48} color="#adc6ff" />
+                <h3>Live Map Tracking</h3>
+                <p>Allow access to your location to find nearby parking and track your movement live.</p>
+                <button className="enable-location-btn" onClick={handleRequestLocation}>
+                  Enable Live Tracking
+                </button>
               </div>
             </div>
-
-            <div className="direction-panel-actions">
-              <button
-                className="lot-detail-btn"
-                onClick={() => navigate(`/parking/lot/${selectedDirectionLot._id}`, { state: { lot: selectedDirectionLot, distance: getLotDistanceKm(selectedDirectionLot) } })}
+          ) : (
+            <div className="map-wrapper">
+              <MapContainer
+                center={mapCenter}
+                zoom={15}
+                style={{ height: '100%', width: '100%' }}
+                zoomControl={false}
               >
-                View Details
-              </button>
-              <button
-                className={`book-btn ${selectedDirectionLot.status}`}
-                disabled={selectedDirectionLot.status === 'full'}
-                onClick={() => navigate(`/parking/lot/${selectedDirectionLot._id}`, { state: { lot: selectedDirectionLot, distance: getLotDistanceKm(selectedDirectionLot) } })}
-              >
-                {selectedDirectionLot.status === 'full' ? 'Sold Out' : 'Book Now'}
-              </button>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
+                <MapInstanceCapture onMapReady={handleMapReady} />
+                <RecenterMap position={mapCenter} />
+                <MapInteractionHandler />
+                {userLocation && destination && <RoutingMachine userLoc={userLocation} destinationLoc={destination} />}
+                {userLocation && <Marker position={userLocation} icon={userIcon}><Popup>You are here (Live)</Popup></Marker>}
+                {parkingLots.map(lot => (
+                  <Marker
+                    key={lot._id}
+                    position={[lot.lat, lot.lon]}
+                    icon={lot.status === 'full' ? parkingFullIcon : parkingIcon}
+                    eventHandlers={{
+                      click: () => selectLot(lot),
+                    }}
+                  >
+                    <Popup>
+                      <div className="map-popup-content">
+                        <strong className="popup-title">{lot.name}</strong>
+                        <div className="popup-details">
+                          <div className="popup-detail-item"><span className="detail-label">Type:</span><span className="detail-value">{(lot.type || 'BOTH').toUpperCase()}</span></div>
+                          <div className="popup-detail-item"><span className="detail-label">Price:</span><span className="detail-value">NPR {lot.pricePerHour}/hr</span></div>
+                          <div className="popup-detail-item"><span className="detail-label">Occupancy:</span><span className="detail-value">{lot.occupiedSpots || 0}/{lot.totalSpots || 0}</span></div>
+                        </div>
+                        <div className="popup-occupancy-bar">
+                          <div className="popup-occupancy-fill" style={{ width: `${Math.min(100, ((lot.occupiedSpots || 0) / (lot.totalSpots || 1)) * 100)}%`, backgroundColor: ((lot.occupiedSpots || 0) / (lot.totalSpots || 1)) > 0.9 ? '#ef4444' : '#6366f1' }}></div>
+                        </div>
+                        <button className="get-directions-btn" onClick={() => selectLot(lot, { route: true })}>
+                          Get Directions
+                        </button>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
             </div>
-          </div>
-        </aside>
-      )}
+          )}
+        </div>
 
-      {/* Overlaid Active Session Card */}
-      {isParked && (
-        <div className="active-session-card">
-          <div className="session-info">
-            <div className="session-header">
-              <span className="live-dot"></span>
-              <h3>Active Parking</h3>
+        {displayLot && (
+          <aside className="parking-detail-card">
+            <button
+              type="button"
+              className="parking-detail-close"
+              aria-label="Close parking details"
+              onClick={() => {
+                setSelectedLot(null);
+                setDestination(null);
+              }}
+            >
+              <X size={16} />
+            </button>
+            <div className="parking-detail-image-wrap">
+              <img src={PARKING_IMAGE} alt={displayLot.name} />
             </div>
-            <div className="session-details">
-              <div className="detail-item">
-                <Clock size={16} />
-                <span>{timer}</span>
+            <div className="parking-detail-body">
+              <div className="parking-detail-head">
+                <h2>{displayLot.name}</h2>
+                <span className={`parking-status-badge ${isLotOpen(displayLot) ? 'open' : 'closed'}`}>
+                  {isLotOpen(displayLot) ? 'OPEN' : 'FULL'}
+                </span>
               </div>
-              <div className="detail-item">
-                <MapPin size={16} />
-                <span>{activeSession.parkingLot?.name || 'Active Spot'}</span>
+              <p className="parking-detail-address">{getLotAddress(displayLot)}</p>
+              <div className="parking-detail-stats">
+                <div className="parking-stat-box">
+                  <span className="parking-stat-label">Available</span>
+                  <span className="parking-stat-value">
+                    <strong>{getAvailableSlots(displayLot)}</strong>
+                    <span> / {displayLot.totalSpots || 0}</span>
+                  </span>
+                </div>
+                <div className="parking-stat-box">
+                  <span className="parking-stat-label">Rate</span>
+                  <span className="parking-stat-value">Rs. {displayLot.pricePerHour} /hr</span>
+                </div>
               </div>
-              <div className="detail-item bill">
-                <Wallet size={16} />
-                <span>NPR {currentBill}</span>
+              {getLotDistanceKm(displayLot) && (
+                <p className="parking-detail-meta">
+                  {getLotDistanceKm(displayLot).toFixed(2)} km away
+                  {getEstimatedDriveMinutes(displayLot) ? ` · ~${getEstimatedDriveMinutes(displayLot)} min drive` : ''}
+                </p>
+              )}
+              <div className="parking-detail-actions">
+                <button
+                  type="button"
+                  className="directions-link-btn"
+                  onClick={() => selectLot(displayLot, { route: true })}
+                >
+                  <Navigation size={16} />
+                  Get Directions
+                </button>
+                <button
+                  type="button"
+                  className="book-parking-btn"
+                  disabled={!isLotOpen(displayLot)}
+                  onClick={() => navigate(`/parking/lot/${displayLot._id}`, {
+                    state: { lot: displayLot, distance: getLotDistanceKm(displayLot) },
+                  })}
+                >
+                  <Car size={18} />
+                  {isLotOpen(displayLot) ? 'Book Parking Space' : 'No Vacancy'}
+                </button>
               </div>
             </div>
-          </div>
-          <button className="checkout-btn" onClick={() => setIsParked(false)}>
-            Check Out
+          </aside>
+        )}
+
+        <div className="map-controls">
+          <button
+            type="button"
+            className="map-ctrl-btn"
+            title="Zoom in"
+            onClick={() => leafletMap?.zoomIn()}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="map-ctrl-btn"
+            title="Zoom out"
+            onClick={() => leafletMap?.zoomOut()}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="map-ctrl-btn map-ctrl-location"
+            title="My location"
+            onClick={() => {
+              if (userLocation) setMapCenter([...userLocation]);
+              else handleRequestLocation();
+            }}
+          >
+            <Crosshair size={18} />
           </button>
         </div>
-      )}
 
-      {/* Bottom discovery sheet removed — Nearby Parking is now in the sidebar */}
+        {/* Map legend */}
+        <div className="map-legend">
+          <h3 className="map-legend-title">Map Legend</h3>
+          <div className="map-legend-items">
+            <div className="map-legend-item"><span className="legend-dot available"></span><span>Available Parking</span></div>
+            <div className="map-legend-item"><span className="legend-dot full"></span><span>No Vacancy</span></div>
+            <div className="map-legend-item"><span className="legend-dot current"></span><span>Current Location</span></div>
+          </div>
+        </div>
 
-      {/* Bottom Middle Location Button */}
-      <button 
-        className="bottom-location-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (userLocation) {
-            setMapCenter([...userLocation]);
-          } else {
-            handleRequestLocation();
-          }
-        }}
-        title="Go to my location"
-      >
-        <MapPin size={24} fill="currentColor" />
-      </button>
+        {/* Active session card */}
+        {isParked && (
+          <div className="active-session-card">
+            <div className="session-info">
+              <div className="session-header">
+                <span className="live-dot"></span>
+                <h3>Active Parking</h3>
+              </div>
+              <div className="session-details">
+                <div className="detail-item"><Clock size={15} /><span>{timer}</span></div>
+                <div className="detail-item"><MapPin size={15} /><span>{activeSession.parkingLot?.name || 'Active Spot'}</span></div>
+                <div className="detail-item bill"><Wallet size={15} /><span>NPR {currentBill}</span></div>
+              </div>
+            </div>
+            <button className="checkout-btn" onClick={() => setIsParked(false)}>Check Out</button>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
 
+
+
 export default Dashboard;
-
-
