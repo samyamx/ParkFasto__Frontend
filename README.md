@@ -1,7 +1,7 @@
-# ParkFasto Frontend
+# Parko Frontend
 
 ## Project Overview
-ParkFasto is a smart parking management system designed to make parking hassle-free for drivers and parking lot owners.  
+Parko is a smart parking management system designed to make parking hassle-free for drivers and parking lot owners.  
 The frontend is responsible for providing a seamless user interface where users can:
 
 - Find and book parking spots

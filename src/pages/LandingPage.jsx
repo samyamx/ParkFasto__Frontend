@@ -19,7 +19,7 @@ const LandingPage = () => {
         <div className="nav-content">
           <div className="logo">
             <AppLogo size={32} className="logo-image" />
-            <span>ParkFasto</span>
+            <span>Parko</span>
           </div>
 
           <button className="glass-btn sign-in" onClick={() => navigate('/login')}>
@@ -92,7 +92,7 @@ const LandingPage = () => {
 
       <section id="about" className="features-section">
         <div className="section-header-centered">
-          <h2>About ParkFasto</h2>
+          <h2>About Parko</h2>
           <p>Built to make parking faster, fairer, and fully transparent in Nepal.</p>
         </div>
 
@@ -127,9 +127,9 @@ const LandingPage = () => {
         <div className="footer-content">
           <div className="footer-logo">
             <AppLogo size={28} className="logo-image" />
-            <span>ParkFasto</span>
+            <span>Parko</span>
           </div>
-          <p>© 2024 ParkFasto. Built for a Smarter Kathmandu.</p>
+          <p>© 2024 Parko. Built for a Smarter Kathmandu.</p>
         </div>
       </footer>
     </div>

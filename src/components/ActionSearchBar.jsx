@@ -26,7 +26,7 @@ const ANIMATION_VARIANTS = {
 };
 
 /**
- * ActionSearchBar for ParkFasto Dashboard
+ * ActionSearchBar for Parko Dashboard
  * Props:
  *  - parkingLots: array of lot objects { _id, name, lat, lon, pricePerHour, totalSpots, occupiedSpots }
  *  - onSelectLot(lot): called when user picks a parking lot suggestion
